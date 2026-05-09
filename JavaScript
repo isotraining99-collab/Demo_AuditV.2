@@ -72,22 +72,51 @@
                         input.onchange = function () {
                             var file = this.files[0];
                             if (!file) return;
+
+                            // 🌟 1. สร้าง ID จำเพาะสำหรับตัวจองพื้นที่ (Placeholder)
+                            var uniqueId = 'upload-placeholder-' + new Date().getTime();
+
+                            // 🌟 2. แทรก Placeholder เพื่อล็อกตำแหน่งไว้ที่ Cursor ปัจจุบันทันที!
+                            var placeholderHtml = `<span id="${uniqueId}" style="background-color: #f8f9fa; border: 1px dashed #adb5bd; color: #6c757d; padding: 4px 12px; border-radius: 20px; font-size: 0.9em; font-style: italic; display: inline-block; margin: 2px 4px; vertical-align: middle;" contenteditable="false">⏳ Uploading: ${file.name}...</span>`;
+                            editor.insertContent(placeholderHtml);
+
                             showToast("Uploading file to document...", "bg-dark");
                             var reader = new FileReader();
                             reader.readAsDataURL(file);
                             reader.onload = function () {
                                 google.script.run.withSuccessHandler(function(url) {
+                                    
+                                    // 🌟 3. โค้ดปุ่มไฟล์ของจริงที่สำเร็จแล้ว
                                     var linkHtml = `<a href="${url}" target="_blank" rel="noopener noreferrer" contenteditable="false" style="background-color: #e0f2fe; border: 1px solid #7dd3fc; color: #0369a1; padding: 4px 12px; border-radius: 20px; font-size: 0.9em; font-weight: 600; display: inline-block; cursor: pointer; margin: 2px 4px; vertical-align: middle; text-decoration: none;" title="View Attached File">📎 ${file.name}</a>&nbsp;`;
-                                    editor.insertContent(linkHtml);
+
+                                    // 🌟 4. วิ่งกลับไปหา Placeholder ตัวเดิมเพื่อเอาปุ่มจริงไปสลับที่ (ไม่สนว่า Cursor ไปอยู่ไหนแล้ว)
+                                    var editorDoc = editor.getDoc();
+                                    var placeholderNode = editorDoc.getElementById(uniqueId);
+                                    if (placeholderNode) {
+                                        placeholderNode.outerHTML = linkHtml;
+                                    } else {
+                                        // เผื่อผู้ใช้เผลอลบตัวจองพื้นที่ทิ้งไปก่อนโหลดเสร็จ ก็ให้แทรกที่ Cursor แทน
+                                        editor.insertContent(linkHtml);
+                                    }
+
                                     showToast("File inserted successfully!", "bg-success");
                                 }).withFailureHandler(function(error) {
+                                    
+                                    // 🌟 ถ้าอัปโหลดล้มเหลว ก็เปลี่ยนตัวจองพื้นที่เป็นข้อความสีแดงเตือนแทน
+                                    var editorDoc = editor.getDoc();
+                                    var placeholderNode = editorDoc.getElementById(uniqueId);
+                                    if (placeholderNode) {
+                                        placeholderNode.outerHTML = `<span style="color: #dc3545; font-size: 0.9em;">❌ Upload Failed: ${file.name}</span>`;
+                                    }
                                     alert("Upload failed: " + error.message);
+                                    
                                 }).uploadMediaToDrive(reader.result, file.name, false);
                             };
                         };
                         input.click();
                     }
                 });
+
             }
         });
     });
@@ -125,7 +154,7 @@
         else if(pageId === 'materialAuditPage') { loadData03(); }
     }
 
-    function isExp(stateObj, key) { return stateObj[key] !== false; }
+    function isExp(stateObj, key) { return stateObj[key] === true; }
 
     function tog(mode, type, key) { 
         if(mode==='01') { window.uiState01[type][key] = !isExp(window.uiState01[type], key); renderTable01(window.currentData01); } 
@@ -161,6 +190,7 @@
                 var safeContent = isCompleted ? encodeURIComponent(node.content) : "";
                 var bgClass = level === 0 ? 'bg-light' : '';
 
+                // 🌟 แก้ไขปุ่ม View ให้ส่ง Title และ Content มาทั้งคู่
                 html += `
                 <tr class="row-document hover-highlight ${bgClass}" onclick="if(${hasChildren}) { tog('01', 'sessions', '${node.aId}'); }">
                     <td class="text-start" style="padding-left: ${padding}px; border-left: ${level > 0 ? '2px dashed #dee2e6' : 'none'};">
@@ -174,7 +204,7 @@
                     <td class="text-center align-middle" style="font-size: 0.85em; color: #6c757d;">${node.ts || '-'}<br>${node.by}</td>
                     <td class="text-center align-middle">
                         <button class="btn btn-sm btn-outline-success me-1 shadow-sm" onclick="event.stopPropagation(); openAddSessionModal('01', '${node.aId}')" title="Add Sub Document"><i class="bi bi-plus-circle"></i> Sub</button>
-                        ${isCompleted ? `<button class="btn btn-outline-primary btn-sm me-1 shadow-sm" onclick="event.stopPropagation(); viewDocument('${safeContent}')"><i class="bi bi-eye"></i> View</button>` : ''}
+                        ${isCompleted ? `<button class="btn btn-outline-primary btn-sm me-1 shadow-sm" onclick="event.stopPropagation(); viewDocument('${node.title.replace(/'/g, "\\'")}', '${safeContent}')"><i class="bi bi-eye"></i> View</button>` : ''}
                         <button class="btn btn-info btn-sm text-white fw-bold shadow-sm" onclick="event.stopPropagation(); openEditor('01', '${node.aId}', '${node.title}', '${safeContent}')"><i class="bi bi-pencil-square"></i> Edit</button>
                         <button class="btn btn-outline-danger btn-sm ms-1 shadow-sm" onclick="event.stopPropagation(); deleteSess('01', '${node.aId}')"><i class="bi bi-trash"></i></button>
                     </td>
@@ -220,6 +250,7 @@
                 var safeContent = isCompleted ? encodeURIComponent(node.content) : "";
                 var bgClass = level === 0 ? 'bg-light' : '';
 
+                // 🌟 แก้ไขปุ่ม View ให้ส่ง Title และ Content มาทั้งคู่
                 html += `
                 <tr class="row-document hover-highlight ${bgClass}" onclick="if(${hasChildren}) { tog('03', 'sessions', '${node.aId}'); }">
                     <td class="text-start" style="padding-left: ${padding}px; border-left: ${level > 0 ? '2px dashed #dee2e6' : 'none'};">
@@ -233,7 +264,7 @@
                     <td class="text-center align-middle" style="font-size: 0.85em; color: #6c757d;">${node.ts || '-'}<br>${node.by}</td>
                     <td class="text-center align-middle">
                         <button class="btn btn-sm btn-outline-success me-1 shadow-sm" onclick="event.stopPropagation(); openAddSessionModal('03', '${node.aId}')" title="Add Sub Document"><i class="bi bi-plus-circle"></i> Sub</button>
-                        ${isCompleted ? `<button class="btn btn-outline-primary btn-sm me-1 shadow-sm" onclick="event.stopPropagation(); viewDocument('${safeContent}')"><i class="bi bi-eye"></i> View</button>` : ''}
+                        ${isCompleted ? `<button class="btn btn-outline-primary btn-sm me-1 shadow-sm" onclick="event.stopPropagation(); viewDocument('${node.title.replace(/'/g, "\\'")}', '${safeContent}')"><i class="bi bi-eye"></i> View</button>` : ''}
                         <button class="btn btn-secondary btn-sm text-white fw-bold shadow-sm" onclick="event.stopPropagation(); openEditor('03', '${node.aId}', '${node.title}', '${safeContent}')"><i class="bi bi-pencil-square"></i> Edit</button>
                         <button class="btn btn-outline-danger btn-sm ms-1 shadow-sm" onclick="event.stopPropagation(); deleteSess('03', '${node.aId}')"><i class="bi bi-trash"></i></button>
                     </td>
@@ -298,7 +329,11 @@
         }
     }
 
-    function viewDocument(safeContentStr) {
+    // 🌟 แก้ไข: ตัวแปรเก็บชื่อไฟล์และฟังก์ชัน View ที่รับ 2 ค่า
+    window.currentViewTitle = "Exported_Document"; 
+
+    function viewDocument(docTitle, safeContentStr) {
+        window.currentViewTitle = docTitle || "Audit_Document";
         var htmlContent = decodeURIComponent(safeContentStr);
         document.getElementById('docViewer').innerHTML = htmlContent; 
         new bootstrap.Modal(document.getElementById('viewDocModal')).show();
@@ -433,6 +468,105 @@
     function openEditCustomerModal(c) { document.getElementById('oldCustomerName').value = c; document.getElementById('renameCustomerInput').value = c; new bootstrap.Modal(document.getElementById('editCustomerModal')).show(); }
     function saveEditCustomer() { var oldC = document.getElementById('oldCustomerName').value, newC = document.getElementById('renameCustomerInput').value; if(newC===""||newC===oldC) return; document.getElementById('btnEditCustomer').innerHTML = '<i class="bi bi-arrow-repeat spin"></i>'; document.getElementById('btnEditCustomer').disabled = true; showToast("Updating data...", "bg-dark"); google.script.run.withSuccessHandler(msg => { bootstrap.Modal.getInstance(document.getElementById('editCustomerModal')).hide(); document.getElementById('btnEditCustomer').innerHTML = 'Save'; document.getElementById('btnEditCustomer').disabled = false; showToast(msg, "bg-success"); loadData01(); loadData02(); loadData03(); }).renameCustomerInSheet(oldC, newC); }
 
-   
+    // ==========================================
+    // 🌟 EXPORT TO WORD (CLIENT-SIDE)
+    // ==========================================
+// ==========================================
+    // 🌟 EXPORT TO WORD (แบบฝังรูปภาพลงไฟล์ 100% + แก้ภาษาเพี้ยน + แก้ล้นขอบ)
+    // ==========================================
+    function exportToWord() {
+        var content = document.getElementById('docViewer').innerHTML;
+        if (!content || content.trim() === "") {
+            alert("No document content to export!");
+            return;
+        }
+
+        var tempDiv = document.createElement('div');
+        tempDiv.innerHTML = content;
+        
+        // 🌟 1. บังคับขนาดรูปภาพไม่ให้ล้นขอบกระดาษ A4 (กว้างสุด 600px สำหรับ A4 แนวตั้ง)
+        var allImgs = tempDiv.getElementsByTagName('img');
+        for(var k = 0; k < allImgs.length; k++) {
+            allImgs[k].style.width = '100%';
+            allImgs[k].style.maxWidth = '600px'; 
+            allImgs[k].style.height = 'auto';
+            allImgs[k].setAttribute('width', '600'); // ใส่ Attribute ดักให้ Word เข้าใจ
+        }
+
+        var fileIds = [];
+        var idToImgMap = {};
+
+        for(var i = 0; i < allImgs.length; i++) {
+            var src = allImgs[i].src;
+            var match = src.match(/id=([a-zA-Z0-9_-]+)/);
+            if(match) {
+                var id = match[1];
+                if(fileIds.indexOf(id) === -1) fileIds.push(id);
+                if(!idToImgMap[id]) idToImgMap[id] = [];
+                idToImgMap[id].push(allImgs[i]);
+            }
+        }
+
+        if(fileIds.length === 0) {
+            finalizeWordExport(tempDiv.innerHTML);
+            return;
+        }
+
+        var btn = document.querySelector('button[onclick="exportToWord()"]');
+        var originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Packing Images...';
+        btn.disabled = true;
+        showToast("Processing embedded images for Word...", "bg-dark");
+
+        google.script.run.withSuccessHandler(function(base64Data) {
+            for(var id in base64Data) {
+                if(base64Data[id]) {
+                    idToImgMap[id].forEach(function(imgEl) {
+                        imgEl.src = base64Data[id]; 
+                    });
+                }
+            }
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            finalizeWordExport(tempDiv.innerHTML); 
+        }).withFailureHandler(function(err) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            alert("Failed to process some images: " + err.message);
+            finalizeWordExport(tempDiv.innerHTML); 
+        }).getBase64FromDrive(fileIds);
+    }
+
+    // 🌟 ฟังก์ชันย่อยสำหรับสร้างและดาวน์โหลดไฟล์ Word
+    function finalizeWordExport(htmlContent) {
+        // 🌟 2. เพิ่ม CSS ตั้งค่าหน้ากระดาษ A4, บังคับฟอนต์ไทย และล็อกขนาดตาราง
+        var css = (
+            '<style>' +
+            '@page WordSection1 { size: 595.3pt 841.9pt; margin: 54.0pt 54.0pt 54.0pt 54.0pt; } ' + // หน้า A4 และขอบกระดาษ
+            'div.WordSection1 { page: WordSection1; font-family: "TH SarabunPSK", "Sarabun", "Tahoma", sans-serif; font-size: 16pt; } ' +
+            'p, span, td, th, div { font-family: "TH SarabunPSK", "Sarabun", "Tahoma", sans-serif; font-size: 16pt; } ' +
+            'table { border-collapse: collapse; width: 100% !important; table-layout: fixed; } ' + // บังคับตารางไม่ให้ล้นขอบ
+            'td, th { border: 1px solid black; padding: 5px; word-wrap: break-word; } ' +
+            '</style>'
+        );
+
+        // 🌟 3. ระบุ Content-Type เป็น UTF-8 
+        var header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta http-equiv='Content-Type' content='text/html; charset=utf-8'><title>" + window.currentViewTitle + "</title>" + css + "</head><body><div class='WordSection1'>";
+        var footer = "</div></body></html>";
+        
+        var sourceHTML = header + htmlContent + footer;
+        
+        // 🌟 4. แทรกชุดรหัส \\ufeff (BOM) ลงไปด้านหน้า เพื่อให้ Word อ่านภาษาไทยได้ทันที
+        var source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent('\ufeff' + sourceHTML);
+        
+        var fileDownload = document.createElement("a");
+        document.body.appendChild(fileDownload);
+        fileDownload.href = source;
+        fileDownload.download = window.currentViewTitle + '.doc';
+        fileDownload.click();
+        document.body.removeChild(fileDownload);
+        
+        showToast("Exported to Word successfully!", "bg-success");
+    }
 
 </script>
