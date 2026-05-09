@@ -12,7 +12,7 @@
 </head>
 <body>
     <nav class="navbar navbar-custom py-3 px-4 mb-4">
-        <div class="container-fluid d-flex justify-content-between align-items-center"><span class="navbar-brand mb-0 h1 fw-bold text-corporate"><i class="bi bi-globe"></i> Audit Management System</span></div>
+        <div class="container-fluid d-flex justify-content-between align-items-center"><span class="navbar-brand mb-0 h1 fw-bold text-corporate"><i class="bi bi-globe"></i> TS-BB (Audit)</span></div>
     </nav>
     <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
         <div id="statusToast" class="toast align-items-center text-white bg-dark border-0" role="alert"><div class="d-flex"><div class="toast-body fw-bold" id="toastMessage"><i class="bi bi-arrow-repeat spin"></i> Processing...</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>
@@ -89,7 +89,7 @@
                     <label class="form-label fw-bold small">Year (e.g. 2024)</label><input type="number" id="sysYear" class="form-control mb-3">
                     <label class="form-label fw-bold small">Customer / Company Name</label><input type="text" id="sysCustomer" class="form-control mb-3" placeholder="e.g. HONDA">
                 </div>
-                <label class="form-label fw-bold small">Contact Person (Full Name)</label><input type="text" id="sysContact" class="form-control mb-3" placeholder="e.g. John Doe">
+                <label class="form-label fw-bold small"> Editor/Contact Person (Full Name)</label><input type="text" id="sysContact" class="form-control mb-3" placeholder="e.g. John Doe">
                 <div id="sysDocTitleContainer" style="display:none;">
                     <label class="form-label fw-bold small text-info"><i class="bi bi-fonts"></i> Document Title</label>
                     <input type="text" id="sysDocTitle" class="form-control border-info" placeholder="e.g. Internal Audit Report (Oct)">
@@ -117,23 +117,23 @@
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-outline-danger" onclick="printCurrentDoc()"><i class="bi bi-file-pdf"></i> Print / Save as PDF</button> 
+                    
                     <button type="button" id="btnSaveRichDoc" class="btn btn-info text-white fw-bold px-5" onclick="saveRichDocument()"><i class="bi bi-save"></i> Save Document</button>                  
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="viewDocModal" tabindex="-1">
+ <div class="modal fade" id="viewDocModal" tabindex="-1">
         <div class="modal-dialog modal-xl-custom">
             <div class="modal-content">
                 <div class="modal-header bg-dark text-white">
                     <h5 class="modal-title fw-bold"><i class="bi bi-file-text"></i> View Document</h5>
                     <div>
-                      <button class="btn btn-sm btn-danger me-2 fw-bold" onclick="printCurrentDoc()"><i class="bi bi-file-pdf"></i> Print to PDF</button>
+                        <button class="btn btn-sm btn-primary me-2 fw-bold" onclick="exportToWord()"><i class="bi bi-file-word"></i> Export to Word</button>
+                        
                         <button class="btn btn-sm btn-outline-light me-3 fw-bold" onclick="loadData01(); loadData03(); showToast('Data refreshed!', 'bg-success');"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
                         <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        
                     </div>
                 </div>
                 <div class="modal-body bg-light">
