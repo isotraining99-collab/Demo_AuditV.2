@@ -358,3 +358,27 @@ function uploadMediaToDrive(base64Data, fileName, isImage) {
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
+
+// ==========================================
+// 🌟 ฟังก์ชันพิเศษสำหรับดึงรูปไปฝังในไฟล์ Word (แก้ปัญหารูปล็อกสิทธิ์องค์กร)
+// ==========================================
+function getBase64FromDrive(fileIds) {
+  try {
+    var result = {};
+    for(var i = 0; i < fileIds.length; i++) {
+       var id = fileIds[i];
+       try {
+         var file = DriveApp.getFileById(id);
+         var blob = file.getBlob();
+         var b64 = Utilities.base64Encode(blob.getBytes());
+         var mime = blob.getContentType();
+         result[id] = "data:" + mime + ";base64," + b64;
+       } catch(e) {
+         result[id] = null; // ถ้ารูปมีปัญหาให้ปล่อยผ่าน จะได้ไม่พังทั้งไฟล์
+       }
+    }
+    return result;
+  } catch(e) {
+    throw new Error(e.message);
+  }
+}
